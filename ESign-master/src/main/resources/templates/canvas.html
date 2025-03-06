@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signature Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        h1 {
+            margin-top: 20px;
+        }
+        canvas {
+            border: 1px solid black;
+            margin: 20px auto;
+            display: block;
+            width: 100%; /* Responsive width */
+            max-width: 600px; /* Limit the max size for larger screens */
+            height: auto; /* Maintain aspect ratio */
+        }
+        #controls {
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Signature Panel</h1>
+    <canvas id="signatureCanvas"></canvas>
+    <div id="controls">
+        <button id="clearButton">Clear</button>
+        <button id="saveButton">Save</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('signatureCanvas');
+        const ctx = canvas.getContext('2d');
+        const clearButton = document.getElementById('clearButton');
+        const saveButton = document.getElementById('saveButton');
+
+        let drawing = false;
+        let prevX = 0, prevY = 0;
+        const drawBuffer = [];
+
+        // Resize the canvas to fit the screen size
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height); // Ensure a white background
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Utility function to get coordinates
+        function getCoordinates(event) {
+            if (event.touches) {
+                const touch = event.touches[0];
+                return [touch.clientX - canvas.offsetLeft, touch.clientY - canvas.offsetTop];
+            } else {
+                return [event.offsetX, event.offsetY];
+            }
+        }
+
+        // Start drawing
+        function startDrawing(event) {
+            drawing = true;
+            [prevX, prevY] = getCoordinates(event);
+        }
+
+        // Stop drawing
+        function stopDrawing() {
+            drawing = false;
+        }
+
+        // Draw on the canvas
+        function draw(event) {
+            if (!drawing) return;
+            const [x, y] = getCoordinates(event);
+
+            // Draw locally
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(prevX, prevY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+
+            // Add event to the buffer
+            drawBuffer.push({
+                startX: prevX,
+                startY: prevY,
+                endX: x,
+                endY: y,
+                color: 'black',
+                strokeWidth: 2
+            });
+
+            [prevX, prevY] = [x, y];
+        }
+
+        // Send buffered draw events to the server every 100ms
+        setInterval(() => {
+            if (drawBuffer.length > 0) {
+                fetch('/api/draw', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(drawBuffer)
+                }).then(() => {
+                    drawBuffer.length = 0; // Clear the buffer after sending
+                }).catch(err => console.error('Failed to send draw events:', err));
+            }
+        }, 500);
+
+        // Clear the canvas
+        clearButton.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height); // Reset to white background
+
+            // Notify the server to clear the server-side canvas
+            fetch('/api/clear', { method: 'DELETE' })
+                .catch(err => console.error('Failed to clear canvas on server:', err));
+        });
+
+        // Save the canvas as an image
+        saveButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/image');
+                const imageUrl = await response.text();
+
+                // Download the image
+                const link = document.createElement('a');
+                link.href = imageUrl;
+                link.download = 'signature.png';
+                link.click();
+            } catch (err) {
+                console.error('Failed to save image:', err);
+            }
+        });
+
+        // Mouse events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
+
+        // Touch events
+        canvas.addEventListener('touchstart', (event) => {
+            event.preventDefault(); // Prevent scrolling
+            startDrawing(event);
+        });
+        canvas.addEventListener('touchmove', (event) => {
+            event.preventDefault(); // Prevent scrolling
+            draw(event);
+        });
+        canvas.addEventListener('touchend', (event) => {
+            event.preventDefault(); // Prevent scrolling
+            stopDrawing();
+        });
+    </script>
+</body>
+</html>
