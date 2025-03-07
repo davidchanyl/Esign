@@ -89,7 +89,7 @@
 
             // Draw locally
             ctx.strokeStyle = 'black';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 5;
             ctx.lineCap = 'round';
             ctx.beginPath();
             ctx.moveTo(prevX, prevY);
@@ -141,9 +141,12 @@
 
                 // Download the image
                 const link = document.createElement('a');
+                //alert(imageUrl);
+                /*
                 link.href = imageUrl;
                 link.download = 'signature.png';
                 link.click();
+                */
             } catch (err) {
                 console.error('Failed to save image:', err);
             }
