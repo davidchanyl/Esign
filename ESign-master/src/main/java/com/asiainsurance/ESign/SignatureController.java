@@ -1,73 +1,65 @@
 package com.asiainsurance.ESign;
 
-
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
+import org.springframework.web.bind.annotation.RequestBody;
 import java.util.Base64;
-import java.util.List;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api")
 public class SignatureController {
 
-    private final int WIDTH = 600;
-    private final int HEIGHT = 300;
-    private BufferedImage canvas;
+    private static final String UPLOAD_DIR = "signatures/";
 
-    public SignatureController() {
-        // Initialize the canvas
-        canvas = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2d = canvas.createGraphics();
-        g2d.setColor(Color.WHITE);
-        g2d.fillRect(0, 0, WIDTH, HEIGHT);
-        g2d.dispose();
-    }
+    @PostMapping("/upload-signature")
+    public ResponseEntity<String> uploadSignature(@RequestBody ImageRequest request) {
+        try {
+            // Decode Base64 image
+            String base64Image = request.getImage().replace("data:image/png;base64,", "");
+            byte[] imageBytes = Base64.getDecoder().decode(base64Image);
 
-    @PostMapping("/draw")
-    public void draw(@RequestBody List<DrawEvent> drawEvents) {
-        Graphics2D g2d = canvas.createGraphics();
-        for (int i = 0; i < drawEvents.size(); i++) {
-            DrawEvent event = drawEvents.get(i);
-            //g2d.setColor(Color.decode(event.getColor()));
-            //g2d.setStroke(new BasicStroke(event.getStrokeWidth(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            g2d.setColor(Color.black);
-            g2d.setStroke(new BasicStroke(5, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
-            // If this is not the first event, connect to the previous point
-            if (i > 0) {
-                DrawEvent prevEvent = drawEvents.get(i - 1);
-                g2d.drawLine(prevEvent.getEndX(), prevEvent.getEndY(), event.getStartX(), event.getStartY());
+            // Ensure the directory exists
+            File directory = new File(UPLOAD_DIR);
+            if (!directory.exists()) {
+                directory.mkdirs();
             }
 
-            // Draw the current segment
-            g2d.drawLine(event.getStartX(), event.getStartY(), event.getEndX(), event.getEndY());
-        }      
+            // Save the image file
+            File outputFile = new File(UPLOAD_DIR + "signature.png");
+            try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+                fos.write(imageBytes);
+            }
 
-        g2d.dispose();
-    }
-
-    @GetMapping("/image")
-    public String getImage() throws IOException {
-        // Save the image to a file
-        File outputFile = new File("signature.png");
-        ImageIO.write(canvas, "PNG", outputFile);
-
-        // Return Base64-encoded image data
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(canvas, "PNG", baos);
-        return "data:image/png;base64," + Base64.getEncoder().encodeToString(baos.toByteArray());
+            return ResponseEntity.ok("Signature saved successfully at " + outputFile.getAbsolutePath());
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error saving signature: " + e.getMessage());
+        }
     }
 
     @DeleteMapping("/clear")
-    public void clearCanvas() {
-        Graphics2D g2d = canvas.createGraphics();
-        g2d.setColor(Color.WHITE);
-        g2d.fillRect(0, 0, WIDTH, HEIGHT);
-        g2d.dispose();
+    public ResponseEntity<String> clearSignature() {
+        File outputFile = new File(UPLOAD_DIR + "signature.png");
+        if (outputFile.exists() && outputFile.delete()) {
+            return ResponseEntity.ok("Signature cleared successfully.");
+        } else {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to clear signature.");
+        }
+    }
+
+    // Inner class to handle the JSON request
+    static class ImageRequest {
+        private String image;
+
+        public String getImage() {
+            return image;
+        }
+
+        public void setImage(String image) {
+            this.image = image;
+        }
     }
 }

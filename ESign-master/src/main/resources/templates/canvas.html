@@ -16,10 +16,10 @@
         }
         canvas {
             border: 1px solid black;
-            margin: 20px auto;
             display: block;
+            touch-action: none; /* Prevents zooming on mobile */
             width: 100%; /* Responsive width */
-            max-width: 600px; /* Limit the max size for larger screens */
+            max-width: 600px; /* Limit max size for larger screens */
             height: auto; /* Maintain aspect ratio */
         }
         #controls {
@@ -45,18 +45,23 @@
         const ctx = canvas.getContext('2d');
         const clearButton = document.getElementById('clearButton');
         const saveButton = document.getElementById('saveButton');
-
         let drawing = false;
         let prevX = 0, prevY = 0;
         const drawBuffer = [];
 
-        // Resize the canvas to fit the screen size
+        // Resize canvas without losing drawing
         function resizeCanvas() {
+            const tempImage = canvas.toDataURL(); // Save current signature
             const rect = canvas.getBoundingClientRect();
             canvas.width = rect.width;
             canvas.height = rect.height;
             ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width, canvas.height); // Ensure a white background
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Restore saved signature
+            const img = new Image();
+            img.src = tempImage;
+            img.onload = () => ctx.drawImage(img, 0, 0);
         }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
@@ -65,7 +70,8 @@
         function getCoordinates(event) {
             if (event.touches) {
                 const touch = event.touches[0];
-                return [touch.clientX - canvas.offsetLeft, touch.clientY - canvas.offsetTop];
+                return [touch.clientX - canvas.getBoundingClientRect().left, 
+                        touch.clientY - canvas.getBoundingClientRect().top];
             } else {
                 return [event.offsetX, event.offsetY];
             }
@@ -73,6 +79,7 @@
 
         // Start drawing
         function startDrawing(event) {
+            event.preventDefault(); // Prevent scrolling
             drawing = true;
             [prevX, prevY] = getCoordinates(event);
         }
@@ -84,6 +91,7 @@
 
         // Draw on the canvas
         function draw(event) {
+            event.preventDefault(); // Prevent unwanted scrolling on mobile
             if (!drawing) return;
             const [x, y] = getCoordinates(event);
 
@@ -116,11 +124,10 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(drawBuffer)
-                }).then(() => {
-                    drawBuffer.length = 0; // Clear the buffer after sending
-                }).catch(err => console.error('Failed to send draw events:', err));
+                }).then(() => drawBuffer.length = 0)
+                .catch(err => console.error('Failed to send draw events:', err));
             }
-        }, 500);
+        }, 100);
 
         // Clear the canvas
         clearButton.addEventListener('click', () => {
@@ -133,23 +140,28 @@
                 .catch(err => console.error('Failed to clear canvas on server:', err));
         });
 
-        // Save the canvas as an image
-        saveButton.addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/image');
-                const imageUrl = await response.text();
+        // Optimized image compression before sending
+        async function getCompressedImage() {
+            return new Promise((resolve) => {
+                const tempCanvas = document.createElement('canvas');
+                const ctx = tempCanvas.getContext('2d');
+                tempCanvas.width = canvas.width / 2; // Scale down
+                tempCanvas.height = canvas.height / 2;
+                ctx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+                resolve(tempCanvas.toDataURL('image/png', 0.7)); // Reduce quality to 70%
+            });
+        }
 
-                // Download the image
-                const link = document.createElement('a');
-                //alert(imageUrl);
-                /*
-                link.href = imageUrl;
-                link.download = 'signature.png';
-                link.click();
-                */
-            } catch (err) {
-                console.error('Failed to save image:', err);
-            }
+        saveButton.addEventListener('click', async () => {
+            const compressedImage = await getCompressedImage();
+            fetch('/api/upload-signature', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: compressedImage })
+            })
+            .then(response => response.json())
+            .then(data => alert('Signature saved successfully!'))
+            .catch(error => console.error('Error:', error));
         });
 
         // Mouse events
@@ -159,18 +171,9 @@
         canvas.addEventListener('mouseleave', stopDrawing);
 
         // Touch events
-        canvas.addEventListener('touchstart', (event) => {
-            event.preventDefault(); // Prevent scrolling
-            startDrawing(event);
-        });
-        canvas.addEventListener('touchmove', (event) => {
-            event.preventDefault(); // Prevent scrolling
-            draw(event);
-        });
-        canvas.addEventListener('touchend', (event) => {
-            event.preventDefault(); // Prevent scrolling
-            stopDrawing();
-        });
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchmove', draw);
+        canvas.addEventListener('touchend', stopDrawing);
     </script>
 </body>
 </html>
