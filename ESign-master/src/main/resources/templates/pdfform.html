@@ -1,98 +1,97 @@
 <!DOCTYPE HTML>
 <html xmlns:th="http://www.thymeleaf.org/dtd/xhtml1-strict-thymeleaf-4.dtd" lang="en">
 <head>
-    <title th:text="|${name}|"></title>
+    <title th:text="|${titleName}|"></title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <link th:href="@{/styles/main.css}" rel="stylesheet" />
 </head>
 <body>
-<div th:with="idCounter = ${counter.get()}"></div>
-<form action="">
-    <th:block th:each="item : ${textContent}">
-        <th:block th:each="name : ${item.names()}">
-            <th:block th:switch="${name}" th:with="idCounter = ${counter.incrementAndGet()}">
+<form action="#" th:action="@{/pdfform}" method="post" th:object="${dataList}">
+    <th:block th:each="dataLabel,iterStat: *{dataList}">
 
-                <h1 th:case="Title" style="text-align:center" th:text="|${item.get(name)}|"></h1>
-                <h2 th:case="Subtitle" style="text-align:left" th:text="|${item.get(name)}|"></h2>
-                <p th:case="Text" style="text-align:left" th:text="|${item.get(name)}|"></p>
-                <p th:case="Subtext" style="margin-left: 15px" th:text="|${item.get(name)}|"></p>
+        <th:block th:switch="${dataLabel.getTextType()}">
 
-                <th:block th:case="Field">
-                    <label th:for="${idCounter}" th:text="|${item.get(name)}|"></label>
-                    <!--suppress HtmlFormInputWithoutLabel -->
-                    <input name="fieldText ${idCounter}" th:id="${idCounter}" type="text" >
-                    <br>
-                </th:block>
+            <h1 th:case="title" style="text-align:center" th:text="|${dataLabel.getContent()}|"></h1>
+            <h2 th:case="subtitle" style="text-align:left" th:text="|${dataLabel.getContent()}|"></h2>
+            <p th:case="text" style="text-align:left" th:text="|${dataLabel.getContent()}|"></p>
+            <p th:case="subtext" style="margin-left: 25px" th:text="|${dataLabel.getContent()}|"></p>
 
+            <th:block th:case="field" >
 
-                <th:block th:case="Date">
-                    <label th:for="${idCounter}" th:text="|${item.get(name)}|"></label>
-                    <!--suppress HtmlFormInputWithoutLabel -->
-                    <input type="date" name="Date ${idCounter}" th:id="|${idCounter}|">
-                    <br>
-                </th:block>
-
-                <th:block th:case="SingleCheck">
-                    <th:block th:each="checkItem,iterStat : ${item.get(name)}">
-
-                        <th:block th:if="${iterStat.first}">
-                            <h4 th:text="|${checkItem}|"></h4>
-                        </th:block>
-
-                        <th:block th:unless="${iterStat.first}" th:with="idCounter = ${counter.incrementAndGet()}">
-                            <!--suppress HtmlFormInputWithoutLabel -->
-                            <input type="radio" name="radio ${item.get(0)}" th:id="${idCounter}">
-                            <label th:unless="${iterStat.first}" th:for="${idCounter}" th:text="|${checkItem}|"></label>
-                        </th:block>
-
-                    </th:block>
-                    <br>
-                </th:block>
-
-                <th:block th:case="MultipleCheck">
-                    <th:block th:each="checkItem,iterStat : ${item.get(name)}">
-
-                        <th:block th:if="${iterStat.first}">
-                            <h4 th:text="|${checkItem}|"></h4>
-                        </th:block>
-
-                        <th:block th:unless="${iterStat.first}" th:with="idCounter = ${counter.incrementAndGet()}">
-                            <!--suppress HtmlFormInputWithoutLabel -->
-                            <input name="checkbox ${item.get(0)}" th:id="${idCounter}" type="checkbox">
-                            <label th:unless="${iterStat.first}" th:for="${idCounter}" th:text="|${checkItem}|"></label>
-                        </th:block>
-                    </th:block>
-                    <br>
-                </th:block>
-
-                <th:block th:case="CheckField">
-                    <th:block th:each="checkItem,iterStat : ${item.get(name)}">
-
-                        <th:block th:if="${iterStat.first}" th:with="idCounter = ${counter.incrementAndGet()}">
-                            <!--suppress HtmlFormInputWithoutLabel -->
-                            <input name="checkbox ${item.get(0)}" th:id="${idCounter}" type="checkbox">
-                            <label th:for="${idCounter}" th:text="|${checkItem}|"></label>
-                        </th:block>
-
-                        <th:block th:unless="${iterStat.first}" th:with="idCounter = ${counter.incrementAndGet()}">
-                            <!--suppress HtmlFormInputWithoutLabel -->
-                            <input name="fieldText ${item.get(0)}" th:id="${idCounter}" type="text">
-                            <label th:for="${idCounter}" th:text="|${checkItem}|"></label>
-                        </th:block>
-
-                    </th:block>
-                    <br>
-                </th:block>
-
-                <th:block th:case="Sign">
-
-                    <p> Function Not implemented</p>
-
-                </th:block>
+                <label th:for="${dataLabel.getFieldName()}" th:text="|${dataLabel.getContent()}|"></label>
+                <!--suppress HtmlFormInputWithoutLabel -->
+                <input th:field="*{dataList[__${iterStat.index}__].fieldName}" type="text">
+                <br>
 
             </th:block>
+
+            <th:block th:case="date">
+
+                <label th:for="${dataLabel.getFieldName()}" th:text="|${dataLabel.getContent()}|"></label>
+                <!--suppress HtmlFormInputWithoutLabel -->
+                <input type="date" th:field="*{dataList[__${iterStat.index}__].fieldName}">
+                <br>
+
+            </th:block>
+
+            <th:block th:case="singleCheck" th:with="checkList = ${dataLabel.getCheckList()}">
+
+                <h4 th:text="|${dataLabel.getTitle()}|"></h4>
+                <th:block th:each="item,itemStat : ${checkList}">
+                    <th:block th:if="${checkList[__${itemStat.index}__].extraField} == 'True'">
+                        <br>
+                    </th:block>
+
+                    <!--suppress HtmlFormInputWithoutLabel -->
+                    <input type="radio" th:field="*{dataList[__${iterStat.index}__].valueList}" th:value="${item.getContent()}">
+                    <label th:for="${item.getFieldName()}" th:text="|${item.getContent()}|"></label>
+
+                    <th:block th:if="${checkList[__${itemStat.index}__].extraField} == 'True'">
+                        <!--suppress HtmlFormInputWithoutLabel -->
+                        <input th:field="*{dataList[__${itemStat.index}__].extraList}" type="text" >
+                        <br>
+                    </th:block>
+                </th:block>
+                <br>
+
+            </th:block>
+
+            <th:block th:case="multipleCheck" th:with="checkList = ${dataLabel.getCheckList()}">
+
+                <h4 th:text="|${dataLabel.getTitle()}|"></h4>
+                <th:block th:each="item,itemStat : ${checkList}">
+                    <th:block th:if="${checkList[__${itemStat.index}__].extraField} == 'True'">
+                        <br>
+                    </th:block>
+
+                    <!--suppress HtmlFormInputWithoutLabel -->
+                    <input type="checkbox" th:field="*{dataList[__${iterStat.index}__].valueList}" th:value="${item.getContent()}">
+                    <label th:for="${item.getFieldName()}" th:text="|${item.getContent()}|"></label>
+
+                    <th:block th:if="${checkList[__${itemStat.index}__].extraField} == 'True'">
+                        <!--suppress HtmlFormInputWithoutLabel -->
+                        <input th:field="*{dataList[__${itemStat.index}__].extraList}" type="text" >
+                        <br>
+                    </th:block>
+                </th:block>
+                <br>
+
+            </th:block>
+
+            <th:block th:case="sign">
+                <h2 style="text-align:left" th:text="|${dataLabel.getContent()}|"></h2>
+                <a th:href="@{/canvas}" th:target="_blank">
+                    <button type="button"> Sign </button>
+                </a>
+
+            </th:block>
+
         </th:block>
     </th:block>
+
+    <p>
+        <input type="submit" value="Submit">
+    </p>
 </form>
 </body>
 </html>
