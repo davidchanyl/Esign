@@ -3,11 +3,16 @@ package com.asiainsurance.ESign;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.RequestBody;
+
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api")
@@ -16,28 +21,21 @@ public class SignatureController {
     private static final String UPLOAD_DIR = "signatures/";
 
     @PostMapping("/upload-signature")
-    public ResponseEntity<String> uploadSignature(@RequestBody ImageRequest request) {
-        try {
-            // Decode Base64 image
-            String base64Image = request.getImage().replace("data:image/png;base64,", "");
-            byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+    public ResponseEntity<Map<String, String>> uploadSignature(@RequestBody Map<String, String> requestData) throws IOException {
+        String base64Image = requestData.get("image").split(",")[1];
+        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+        
+        String fileName = "signature_" + System.currentTimeMillis() + ".png";
+        Path filePath = Paths.get(UPLOAD_DIR + fileName);
+        
+        Files.createDirectories(filePath.getParent());
+        Files.write(filePath, imageBytes);
 
-            // Ensure the directory exists
-            File directory = new File(UPLOAD_DIR);
-            if (!directory.exists()) {
-                directory.mkdirs();
-            }
+        String imageUrl = "/signatures/" + fileName;
 
-            // Save the image file
-            File outputFile = new File(UPLOAD_DIR + "signature.png");
-            try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-                fos.write(imageBytes);
-            }
-
-            return ResponseEntity.ok("Signature saved successfully at " + outputFile.getAbsolutePath());
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error saving signature: " + e.getMessage());
-        }
+        Map<String, String> response = new HashMap<>();
+        response.put("imageUrl", imageUrl);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/clear")

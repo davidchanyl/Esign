@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signature Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 20px auto;
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+        }
+        #controls {
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #signatureImage {
+            margin-top: 10px;
+            border: 1px solid black;
+            max-width: 600px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Signature Panel</h1>
+    <canvas id="signatureCanvas"></canvas>
+    <div id="controls">
+        <button id="clearButton">Clear</button>
+        <button id="saveButton">Save</button>
+    </div>
+    <h2>Saved Signature:</h2>
+    <img id="signatureImage" />
+
+    <script>
+        const canvas = document.getElementById('signatureCanvas');
+        const ctx = canvas.getContext('2d');
+        const clearButton = document.getElementById('clearButton');
+        const saveButton = document.getElementById('saveButton');
+        const signatureImage = document.getElementById('signatureImage');
+
+        let drawing = false;
+        let prevX = 0, prevY = 0;
+
+        function resizeCanvas() {
+            canvas.width = 600;
+            canvas.height = 300;
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        resizeCanvas();
+
+        function getCoordinates(event) {
+            if (event.touches) {
+                const touch = event.touches[0];
+                return [touch.clientX - canvas.offsetLeft, touch.clientY - canvas.offsetTop];
+            } else {
+                return [event.offsetX, event.offsetY];
+            }
+        }
+
+        function startDrawing(event) {
+            drawing = true;
+            [prevX, prevY] = getCoordinates(event);
+        }
+
+        function stopDrawing() {
+            drawing = false;
+        }
+
+        function draw(event) {
+            if (!drawing) return;
+            const [x, y] = getCoordinates(event);
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(prevX, prevY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            [prevX, prevY] = [x, y];
+        }
+
+        clearButton.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            signatureImage.style.display = 'none';
+        });
+
+        saveButton.addEventListener('click', () => {
+            const imageData = canvas.toDataURL('image/png');
+
+            fetch('/upload-signature', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                signatureImage.src = data.imageUrl;
+                signatureImage.style.display = 'block';
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
+
+        canvas.addEventListener('touchstart', (event) => {
+            event.preventDefault();
+            startDrawing(event);
+        });
+        canvas.addEventListener('touchmove', (event) => {
+            event.preventDefault();
+            draw(event);
+        });
+        canvas.addEventListener('touchend', (event) => {
+            event.preventDefault();
+            stopDrawing();
+        });
+    </script>
+</body>
+</html>
