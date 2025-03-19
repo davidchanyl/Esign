@@ -27,7 +27,7 @@ import java.util.Objects;
 public class PdfCreator {
 
     public static float FONT_SIZE_DEFAULT = 10f;
-    public static String REGULAR = "src/main/resources/fonts/NotoSansCJKsc-Regular.otf";
+    public static String REGULAR = "fonts/NotoSansCJKsc-Regular.otf";
 
     public void createPdf(String name, DataList dataList) throws IOException {
 
@@ -128,7 +128,7 @@ public class PdfCreator {
 
     public Image createPara(){
 
-        String imageFile = "src/main/resources/pdfStore/signatures/signature.png";
+        String imageFile = "signatures/signature.png";
         ImageData imgData;
         try {
             imgData = ImageDataFactory.create(imageFile);
@@ -137,7 +137,7 @@ public class PdfCreator {
         }
 
         Image img = new Image(imgData);
-        img.scaleAbsolute(60, 120);
+        img.scaleAbsolute(120, 60);
 
         return img;
     };
@@ -172,7 +172,7 @@ public class PdfCreator {
 
                 if (s.equals(str)) {
 
-                    String imageFile = "src/main/resources/static/Images/Checked.jpg";
+                    String imageFile = "Images/Checked.jpg";
                     try {
                         imgData = ImageDataFactory.create(imageFile);
                     } catch (MalformedURLException e) {
@@ -188,7 +188,7 @@ public class PdfCreator {
             }
 
             if (!checked) {
-                String imageFile = "src/main/resources/static/Images/Unchecked.jpg";
+                String imageFile = "Images/Unchecked.jpg";
                 try {
                     imgData = ImageDataFactory.create(imageFile);
                 } catch (MalformedURLException e) {

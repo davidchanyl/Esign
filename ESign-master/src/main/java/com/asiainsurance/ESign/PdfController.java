@@ -44,7 +44,7 @@ public class PdfController {
 
     @RequestMapping(path = "/download", method = RequestMethod.GET)
     public ResponseEntity<ByteArrayResource> download(String param) throws IOException {
-        String dirpath = "classpath:pdfStore/";
+        String dirpath = "";
         String clspath = dirpath.concat("sample.pdf");
         File file = ResourceUtils.getFile(clspath);
 

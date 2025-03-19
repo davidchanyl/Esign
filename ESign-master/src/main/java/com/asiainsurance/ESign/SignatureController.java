@@ -25,7 +25,7 @@ public class SignatureController {
         String base64Image = requestData.get("image").split(",")[1];
         byte[] imageBytes = Base64.getDecoder().decode(base64Image);
         
-        String fileName = "signature_" + System.currentTimeMillis() + ".png";
+        String fileName = "signature.png";
         Path filePath = Paths.get(UPLOAD_DIR + fileName);
         
         Files.createDirectories(filePath.getParent());
