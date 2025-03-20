@@ -16,7 +16,6 @@
         }
         canvas {
             border: 1px solid black;
-            display: block;
             touch-action: none; /* Prevents zooming on mobile */
             width: 100%; /* Responsive width */
             max-width: 600px; /* Limit max size for larger screens */
@@ -39,9 +38,9 @@
     <div id="controls">
         <button id="clearButton">Clear</button>
         <button id="saveButton">Save</button>
-    </div>
+<!--     </div>
     <h2>Saved Signature:</h2>
-    <img id="signatureImage" />
+    <img id="signatureImage" /> -->
     <script>
         const canvas = document.getElementById('signatureCanvas');
         const ctx = canvas.getContext('2d');
@@ -162,12 +161,13 @@
                 body: JSON.stringify({ image: compressedImage })
             })
             .then(response => response.json())
-            .then(data => 
-            //alert('Signature saved successfully!')
-	            {
+            .then(data =>
+            	window.close()
+            	//alert('Signature saved successfully!')
+/* 	            {
 	                signatureImage.src = data.imageUrl;
 	                signatureImage.style.display = 'block';
-	            }
+	            } */
             )
             .catch(error => console.error('Error:', error));
         });
